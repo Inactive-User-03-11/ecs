@@ -180,24 +180,7 @@ All 17 defects in the table in section 2 were fixed. The design changes behind t
 | JSON log lines | CloudWatch Logs Insights can filter by field (`event`, `account_id`). |
 | `/health` does not touch the DB | A brief Aurora failover does not make the ALB kill healthy tasks. |
 
-### 3.2 Infrastructure changes and mistakes
-
-| # | What was wrong | Why it was wrong | Fix |
-|---|---|---|---|
-| 1 | Used the `terraform-aws-modules/vpc` module | You asked for the network broken into plain resources. | Wrote `network.tf` with explicit VPC, 3 subnet tiers, IGW, NAT, route tables. |
-| 2 | Wrote blocks on one line, e.g. `ingress { from_port = 443, to_port = 443 }` | Invalid HCL. Terraform needs one attribute per line inside blocks. | Rewrote every block in multi-line form. |
-| 3 | `autoscaling.tf` contained a stray `target_citation_placeholder = null` line | That argument does not exist in Terraform. | Replaced with a complete, correct `target_tracking_scaling_policy_configuration`. |
-| 4 | Used ECR | You use Docker Hub. | Removed the ECR repo and ECR permissions. Image is `var.image_repo:var.image_tag`. |
-| 5 | Used Secrets Manager for the CRM URL | You want a plain URL. | `CRM_URL` is a plain env var. Removed the secret, its version, and the execution-role secret policy. |
-| 6 | CI deployed with `aws ecs update-service` | You wanted GitOps, with Git as the source of truth. | CI commits the tag to `infra/image.auto.tfvars`. Terraform changes the task definition. |
-| 7 | Route 53 was in the architecture | You do not want it. | Removed from the design. No Terraform resources used it. |
-| 8 | ALB had an HTTPS listener and ACM certificate | You want plain HTTP. | Listener on port 80, ALB security group on port 80, removed `certificate_arn`. |
-| 9 | Renamed listener `https` to `http` but `ecs.tf` still referenced `aws_lb_listener.https` | Terraform error: reference to undeclared resource. | Updated `depends_on` to `aws_lb_listener.http`. A second error showed `alb.tf` had not been updated, so the full file was re-sent. |
-| 10 | `aurora_engine_version = "16.4"` | AWS does not offer that version in `ap-south-1` (`Cannot find version 16.4`). | List valid versions with `describe-db-engine-versions` and set a version from the list. |
-| 11 | Plan showed `image_deployed = "demo:latest"` | Fargate would try to pull a non-existent image and the circuit breaker would fail the apply. | Push a real image and set `image_repo` and `image_tag`. Never deploy `latest`. |
-| 12 | ALB security group description still said "Public HTTPS" | Misleading leftover after switching to port 80. | Changed to "Public HTTP to the ALB". Changing it before the first apply avoids a later replacement. |
-
-### 3.3 Things that remain open (be honest about these)
+### 3.2 Things that remain open (be honest about these)
 
 - **Not fully tested.** The plan succeeds (43 resources). The apply surfaced the Aurora version error. The `null_resource.db_init` Data API step and the first ECS rollout have not been confirmed yet.
 - **Plain HTTP and no auth** on the webhook. Add HTTPS and a shared-secret header check before production.
