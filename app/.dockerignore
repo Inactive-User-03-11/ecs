@@ -1,0 +1,5 @@
+__pycache__
+*.pyc
+test_main.py
+requirements-dev.txt
+.git
