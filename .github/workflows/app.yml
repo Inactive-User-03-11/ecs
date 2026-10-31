@@ -1,0 +1,56 @@
+name: app
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**"]
+
+permissions:
+  id-token: write   # OIDC to AWS (needed by the called terraform workflow)
+  contents: write   # commit the new image tag
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+        working-directory: app
+      - run: pytest -q
+        working-directory: app
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: app
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/call-webhook:${{ github.sha }}
+
+      # GitOps step: the new tag is written to git, not pushed to ECS
+      - name: Commit new image tag
+        run: |
+          echo "image_tag = \"${{ github.sha }}\"" > infra/image.auto.tfvars
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infra/image.auto.tfvars
+          git commit -m "deploy: image ${GITHUB_SHA::7}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+  deploy:
+    needs: build
+    uses: ./.github/workflows/terraform.yml
+    secrets: inherit

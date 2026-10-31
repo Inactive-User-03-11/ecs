@@ -1,0 +1,42 @@
+name: terraform
+
+on:
+  push:
+    branches: [main]
+    paths: ["infra/**"]      # infra changes, or a reverted tag commit = rollback
+  workflow_call:             # called by app.yml after it commits a new tag
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-apply     # never run two applies at once
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_VAR_crm_url: ${{ secrets.CRM_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main           # pick up the tag commit app.yml just pushed
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+
+      - run: terraform init -input=false
+      - run: terraform validate
+      - run: terraform plan -input=false -out=tfplan
+      - run: terraform apply -input=false tfplan
