@@ -12,14 +12,7 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket       = "REPLACE-with-your-state-bucket" # backends can't use variables
-    key          = "call-webhook/terraform.tfstate"
-    region       = "ap-south-1"
-    encrypt      = true
-    use_lockfile = true
   }
-}
 
 provider "aws" {
   region = var.region

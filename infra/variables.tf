@@ -15,25 +15,24 @@ variable "vpc_cidr" {
 
 variable "aurora_engine_version" {
   type    = string
-  default = "16.4"
+  default = "17.7"
 }
 
 # Docker Hub repo, e.g. "myuser/call-webhook"
 variable "image_repo" {
   type = string
+  default = "at1asflame/call-webhook"
 }
 
 # Written by CI into image.auto.tfvars (the GitOps knob)
 variable "image_tag" {
   type = string
+  default = "1.0.0"
 }
 
-# ACM certificate in ap-south-1 (validated by a CNAME at your own DNS provider)
-variable "certificate_arn" {
-  type = string
-}
 
 # Plain URL, passed by CI as TF_VAR_crm_url (GitHub secret)
 variable "crm_url" {
   type = string
+  default = "demo"
 }

@@ -75,7 +75,7 @@ resource "aws_ecs_service" "app" {
     container_port   = 8000
   }
 
-  depends_on = [aws_lb_listener.https, null_resource.db_init]
+  depends_on = [aws_lb_listener.http, null_resource.db_init]
 
   # autoscaling owns the task count
   lifecycle {

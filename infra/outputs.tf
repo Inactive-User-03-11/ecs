@@ -1,6 +1,10 @@
 output "alb_dns" {
-  description = "Create a CNAME from your webhook hostname to this value"
-  value       = aws_lb.app.dns_name
+  value = aws_lb.app.dns_name
+}
+
+output "webhook_url" {
+  description = "Give this URL to the voice platform"
+  value       = "http://${aws_lb.app.dns_name}/webhook/call-completed"
 }
 
 output "image_deployed" {
